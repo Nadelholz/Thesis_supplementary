@@ -1,0 +1,32 @@
+Ler_mustbe_greater_than_100_Deseq_log=function(LER_COUNT) {
+  Ler_Countdata_MSTRG_Lerce_prots_Deseq <- LER_COUNT[, c(4, 7:12)]
+  Ler_countdata_Ihate_deseq_avg <- data.frame(
+    ID = Ler_Countdata_MSTRG_Lerce_prots_Deseq$Geneid,
+    Myc = rowMeans(select(Ler_Countdata_MSTRG_Lerce_prots_Deseq, 2:4)),
+    Hyp = rowMeans(select(Ler_Countdata_MSTRG_Lerce_prots_Deseq, 5:7))
+  )
+  rownames(Ler_Countdata_MSTRG_Lerce_prots_Deseq) <-Ler_Countdata_MSTRG_Lerce_prots_Deseq$Geneid 
+  Ler_Countdata_MSTRG_Lerce_prots_Deseq <- Ler_Countdata_MSTRG_Lerce_prots_Deseq[, -1]
+  
+  stage <- rep("P", dim(Ler_Countdata_MSTRG_Lerce_prots_Deseq)[2])
+  stage[grep("_M", names(Ler_Countdata_MSTRG_Lerce_prots_Deseq))] <- "M"
+  Coldata_Ler_prots_all <- data.frame(Stage=stage)
+  rownames(Coldata_Ler_prots_all) <- names(Ler_Countdata_MSTRG_Lerce_prots_Deseq)
+  
+  dds_Lerprots_all_inc_MSTRG <- DESeqDataSetFromMatrix(countData = round(Ler_Countdata_MSTRG_Lerce_prots_Deseq),
+                                                       colData=Coldata_Ler_prots_all,
+                                                       design= ~ Stage)
+  dds_Lerprots_all_inc_MSTRG$Stage <- relevel(dds_Lerprots_all_inc_MSTRG$Stage, ref="M")
+  dds_Lerprots_all_inc_MSTRG <- DESeq(dds_Lerprots_all_inc_MSTRG)
+  res <- results(dds_Lerprots_all_inc_MSTRG)
+  Ler_table <- data.frame(ID=rownames(Ler_Countdata_MSTRG_Lerce_prots_Deseq), Log=(res$log2FoldChange), Pvalue=(res$pvalue), lfcSE=(res$lfcSE))
+  Ler_table_Deseq <- subset(Ler_table, (Log > 2 & Pvalue < 0.05) | (Log < -2 & Pvalue < 0.05))
+  Ler_Countdata_high <- Ler_table_Deseq %>%
+    mutate(
+      ID = gsub("\\.", "_", ID),  # Replace dots with underscores
+    )
+  ###Removing duplicates
+  #Ler_Countdata_tokeep_VeryHIGH_no_duplicates <- !duplicated(Ler_Countdata_high[, c("Myc_Hyp_change")])
+  #Ler_Countdata_high <- Ler_Countdata_high[Ler_Countdata_tokeep_VeryHIGH_no_duplicates, ] #224
+  return(Ler_Countdata_high)
+}
