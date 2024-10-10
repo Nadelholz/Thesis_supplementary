@@ -1,0 +1,104 @@
+import pandas as pd
+import argparse
+from scipy.stats import fisher_exact
+import numpy as np
+import sys
+import statsmodels.stats.multitest as smm
+from pathlib import Path
+
+
+
+
+Names_Lerce=Path("")
+GO_DESCRIPTION=Path("")
+GENE_GO_LOOKUP=Path("")
+
+# with open(Names_Lerce, "r") as file:
+#     genelist=set(line.strip() for line in file)
+#     print(genelist)
+
+
+def read_gene_list(file_path):
+    with open(file_path, 'r') as file:
+        gene_list = set(line.strip() for line in file)
+    return gene_list
+
+
+def read_lookup_table(file_path):
+    lookup_df = pd.read_csv(file_path, sep='\t', header=None, names=['GeneID', 'Annotations'])
+    lookup_df['Annotations'] = lookup_df['Annotations'].str.split(',')
+    return lookup_df
+
+
+def read_definition(file_path):
+    def_df = pd.read_csv(file_path, sep='\t', header=None, names=['Annotation', 'Definition'])
+    def_df['Annotation'] = def_df['Annotation'].astype(str)
+    return def_df
+
+
+def perform_enrichment_analysis(genes_of_interest, background_genes, lookup_df):
+    if not background_genes:
+        background_genes = set(lookup_df['GeneID'])
+
+    background_genes = background_genes - genes_of_interest
+
+    genes_of_interest_df = lookup_df[lookup_df['GeneID'].isin(genes_of_interest)]
+    background_genes_df = lookup_df[lookup_df['GeneID'].isin(background_genes)]
+
+    annotation_counts_A = pd.Series(np.concatenate(genes_of_interest_df['Annotations'].values)).value_counts()
+    annotation_counts_C = pd.Series(np.concatenate(background_genes_df['Annotations'].values)).value_counts()
+
+    results = []
+
+    for annotation in annotation_counts_A.index:
+        A1 = annotation_counts_A.get(annotation, 0)
+        A0 = len(genes_of_interest) - A1
+        C1 = annotation_counts_C.get(annotation, 0)
+        C0 = len(background_genes) - C1
+
+        oddsratio, pvalue = fisher_exact([[A1, A0], [C1, C0]])
+        log_oddsratio = np.log(oddsratio) if oddsratio > 0 else float('inf')
+
+        results.append([annotation, pvalue, log_oddsratio, A1, A0, C1, C0])
+
+    results_df = pd.DataFrame(results, columns=['Annotation', 'P-Value', 'Log-Odds Ratio', 'A1', 'A0', 'C1', 'C0'])
+    results_df['FDR'] = smm.multipletests(results_df['P-Value'], method='fdr_bh')[1]
+    results_df['Annotation'] = results_df['Annotation'].astype(str)
+
+    return results_df
+
+
+def save_results(results_df, output_file):
+    results_df.to_csv(output_file, sep='\t', index=False)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Functional Annotation Enrichment Analysis")
+    parser.add_argument('-gene', required=True, help="Path to the file containing the list of genes of interest")
+    parser.add_argument('-background', help="Path to the file containing the background gene list (optional)")
+    parser.add_argument('-lookup', required=True, help="Path to the lookup table file")
+    parser.add_argument('-definition', help="Path to the file containing annotation definitions")
+    parser.add_argument('-out', required=True, help="Path to the output file")
+
+    args = parser.parse_args()
+
+    genes_of_interest = read_gene_list(args.gene)
+    background_genes = read_gene_list(args.background) if args.background else None
+    lookup_df = read_lookup_table(args.lookup)
+    def_df = read_definition(args.definition) if args.definition else pd.DataFrame()
+
+    if background_genes:
+        set_difference = background_genes - genes_of_interest
+        if not set_difference:
+            print("Warning: Background gene list is a subset of the gene list of interest.")
+
+    results_df = perform_enrichment_analysis(genes_of_interest, background_genes, lookup_df)
+    if not def_df.empty:
+        results_df = results_df.merge(def_df, on=['Annotation'])
+
+    results_df = results_df.sort_values(['P-Value'])
+    save_results(results_df, args.out)
+
+
+if __name__ == "__main__":
+    main()
