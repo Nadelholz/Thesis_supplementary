@@ -1,0 +1,23 @@
+Fold_generation_deseq_mRNA <- function(Tissue_dataset_to_compare) {
+  df <- Tissue_dataset_to_compare %>%
+    mutate(
+      Condition = ifelse(Log < 0, "Neg_log", "Pos_log"),
+      Absolute_Log = abs(Log),  # New column with absolute values of Log
+      fold = round(2^Absolute_Log),
+      Fold_SD = (2^lfcSE)
+    )
+  df_negative <- df %>%
+    filter(Condition == "Neg_log") %>%
+    mutate(fold = -fold) %>%
+    select(ID, Absolute_Log, fold, Fold_SD, Condition, Group, Color_Group)
+  
+  df_Positive <- df %>%
+    filter(Condition == "Pos_log") %>%
+    select(ID, Absolute_Log, fold, Fold_SD, Condition, Group, Color_Group)
+  
+  df_neg_pos <- bind_rows(df_negative, df_Positive)
+  df_neg_pos <- df_neg_pos %>% mutate(ymin = fold - Fold_SD,
+                                      ymax = fold + Fold_SD)
+  
+  return(df_neg_pos)
+}
