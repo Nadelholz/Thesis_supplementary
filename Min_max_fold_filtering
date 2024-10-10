@@ -1,0 +1,95 @@
+Min_Max_included_function <- function(fold_generated_data, condition, CC) {
+  # Select relevant columns and pivot the dataframe
+  Group_Colour_Ymin_Ymax <- fold_generated_data[, c(6:9)] %>%
+    pivot_wider(names_from = Color_Group, values_from = c(ymin, ymax))
+  
+  # Calculate the min and max values for each group
+  Group_Colour_Ymin_Ymax_filt <- Group_Colour_Ymin_Ymax %>%
+    rowwise() %>%
+    mutate(
+      min_Lerce = min(c_across(starts_with("ymin_Lerce")), na.rm = TRUE),
+      max_Lerce = max(c_across(starts_with("ymax_Lerce")), na.rm = TRUE),
+      min_LerER = min(c_across(starts_with("ymin_LerER")), na.rm = TRUE),
+      max_LerER = max(c_across(starts_with("ymax_LerER")), na.rm = TRUE),
+      min_CC = min(c_across(starts_with("ymin_CC")), na.rm = TRUE),
+      max_CC = max(c_across(starts_with("ymax_CC")), na.rm = TRUE)
+    )
+  
+  # Filter based on the provided conditions
+  if (condition == "Up_down" && CC == "Dont_care") {
+    Up_DOWN_LL <- Group_Colour_Ymin_Ymax_filt %>%
+      filter((min_Lerce < 0 && max_LerER > 0) | (min_LerER < 0 && max_Lerce > 0)) %>%
+      filter((max_LerER - min_Lerce > 5) | (max_Lerce - min_LerER > 5))
+    Up_DOWN_LL_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_DOWN_LL$Group)
+    return(Up_DOWN_LL_GGplot)
+  } else if (condition == "down_down" && CC == "Dont_care") {
+    Down_DOWN_LL <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(max_Lerce < 0 && max_LerER < 0) %>%
+      filter((min_LerER - min_Lerce < -5) | (min_Lerce - min_LerER < -5))
+    down_DOWN_LL_GGplot <- fold_generated_data %>%
+      filter(Group %in% Down_DOWN_LL$Group)
+    return(down_DOWN_LL_GGplot)
+  } else if (condition == "up_up" && CC == "Dont_care") {
+    Up_Up_LL <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_Lerce > 0 && min_LerER > 0) %>%
+      filter((max_LerER - max_Lerce > 5) | (max_Lerce - max_LerER > 5))
+    Up_Up_LL_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_Up_LL$Group)
+    return(Up_Up_LL_GGplot)
+  } else if (condition == "Up_down" && CC == "Present") {
+    Up_down_LL_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter((min_Lerce < 0 && max_LerER > 0) | (min_LerER < 0 && max_Lerce > 0)) %>%
+      filter((max_LerER - min_Lerce > 5 & max_LerER - min_CC > 5) | (max_Lerce - min_LerER > 5 & max_CC - min_LerER > 5))
+    Up_down_LL_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_down_LL_CC$Group)
+    return(Up_down_LL_CC_GGplot)
+  } else if (condition == "up_up" && CC == "Present") {
+    Up_up_LL_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_Lerce > 0 && min_LerER > 0) %>%
+      filter((max_LerER - max_Lerce > 5 & max_LerER - max_CC > 5) | (max_Lerce - max_LerER > 5 & max_CC - max_LerER > 5))
+    Up_up_LL_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_up_LL_CC$Group)
+    return(Up_up_LL_CC_GGplot)
+  } else if (condition == "down_down" && CC == "Present") {
+    down_down_LL_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_Lerce < 0 && min_LerER < 0) %>%
+      filter((min_LerER - min_Lerce < -5 & min_LerER - min_CC < -5) | (min_Lerce - min_LerER > -5 & min_CC - min_LerER < -5))
+    down_down_LL_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% down_down_LL_CC$Group)
+    return(down_down_LL_CC_GGplot)
+  } else if (condition == "up_up" && CC == "CC_LC") {
+    Up_up_LC_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_Lerce > 0 && min_CC > 0)
+    Up_up_LC_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_up_LC_CC$Group)
+    return(Up_up_LC_CC_GGplot)
+  } else if (condition == "down_down" && CC == "CC_LC") {
+    down_down_LC_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_Lerce < 0 && min_CC < 0)
+    down_down_LC_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% down_down_LC_CC$Group)
+    return(down_down_LC_CC_GGplot)
+  } else if (condition == "Up_down" && CC == "CC_LE") {
+    Up_down_LE_CC <- Group_Colour_Ymin_Ymax_filt %>%
+      filter((min_CC < 0 && min_LerER > 0) | (min_CC > 0 && min_LerER < 0)) %>%
+      filter((max_LerER - min_CC > 5) | (max_CC - min_LerER > 5))
+    Up_down_LE_CC_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_down_LE_CC$Group)
+    return(Up_down_LE_CC_GGplot)
+  } else if (condition == "up_up" && CC == "CC_LE") {
+    Up_up_CC_LE <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(min_CC > 0 && min_LerER > 0) %>%
+      filter((max_LerER - max_CC > 5) | (max_CC - max_LerER > 5))
+    Up_up_CC_LE_GGplot <- fold_generated_data %>%
+      filter(Group %in% Up_up_CC_LE$Group)
+    return(Up_up_CC_LE_GGplot)
+  } else if (condition == "down_down" && CC == "CC_LE") {
+    Down_Down_CC_LE <- Group_Colour_Ymin_Ymax_filt %>%
+      filter(max_LerER < 0 && max_CC < 0) %>%
+      filter(min_LerER - min_CC < -5)
+    Down_Down_CC_LE_GGplot <- fold_generated_data %>%
+      filter(Group %in% Down_Down_CC_LE$Group)
+    return(Down_Down_CC_LE_GGplot)
+  }
+}
