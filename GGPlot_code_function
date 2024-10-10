@@ -1,0 +1,33 @@
+GGPlot_function_betterfigs <- function(GGplot_data, Title) {
+  # Modify the data as per required changes in Colour_Group
+  Improved_data <- GGplot_data %>%
+    mutate(Color_Group = gsub("Lerce", "L. ceres (Prim)", Color_Group),
+           Color_Group = gsub("LerER", "L. erythro (Prim)", Color_Group),
+           Color_Group = gsub("CC_Hyp", "C. cin HK", Color_Group),
+           Color_Group = gsub("CC_P1", "C. cin Prim(1)", Color_Group),
+           Color_Group = gsub("CC_P2", "C. cin Prim(2)", Color_Group), Group= gsub("GP", "OG", Group)) %>%
+    rename(Development_stage = Color_Group)
+  
+  # Create the plot
+  ggplot(Improved_data, aes(x = "", y = fold, fill = Development_stage)) +  # Set x aesthetic to a constant value
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9)) +
+    geom_errorbar(aes(ymin = ymin, ymax = ymax), 
+                  width = 0.2, 
+                  position = position_dodge(width = 0.9)) +
+    facet_wrap(~ Group, scales = "free_y") +
+    labs(title = Title, 
+         x = "",  # Remove X-axis label
+         y = "Fold change (with respect to vegetative mycelium)") +
+    theme_minimal() +
+    theme(
+      legend.position = "top",
+      plot.title = element_text(hjust = 0.5, size = 18),  # Increase title size
+      axis.title.y = element_text(size = 18, vjust = 2.5),  # Increase Y-axis title size and move it further left
+      axis.text.y = element_text(size = 18),  # Increase Y-axis tick labels size
+      legend.title = element_text(size = 16),  # Increase fill title size
+      legend.text = element_text(size = 16),  # Increase the size of legend values (developmental stage)
+      strip.text = element_text(size = 16),  # Increase the size of the Group facet label text
+      axis.text.x = element_blank(),  # Remove X-axis text
+      axis.ticks.x = element_blank()  # Remove X-axis ticks
+    )
+}
