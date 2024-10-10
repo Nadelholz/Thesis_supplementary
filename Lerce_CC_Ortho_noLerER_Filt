@@ -1,0 +1,41 @@
+Selecting_10_smallest_changes_LerCe_CC <- function(JGI_UD_DD_UU_data, condition) {
+  prep <- JGI_UD_DD_UU_data[, c(1, 3, 6, 7)]
+  
+  if (condition == "UU") {
+    differences <- prep %>%
+      group_by(Group) %>%
+      summarise(
+        Max_Lerce = max(fold[Color_Group == "Lerce"], na.rm = TRUE),
+        Max_CC = max(fold[Color_Group %in% c("CC_P1", "CC_P2", "CC_Hyp")], na.rm = TRUE),
+        Difference = abs(Max_Lerce - Max_CC),
+        .groups = 'drop'
+      )
+  } else if (condition == "DD") {
+    differences <- prep %>%
+      group_by(Group) %>%
+      summarise(
+        min_Lerce = min(fold[Color_Group == "Lerce"], na.rm = TRUE),
+        min_CC = min(fold[Color_Group %in% c("CC_P1", "CC_P2", "CC_Hyp")], na.rm = TRUE),
+        Difference = abs(min_Lerce - min_CC),
+        .groups = 'drop'
+      )
+  }
+  
+  # Joining to groups of interest
+  Selecting_groupsof_Int <- prep %>%
+    left_join(differences %>% select(Group, Difference), by = "Group") 
+  
+  # Selecting 10 smallest differences
+  Top_10 <- Selecting_groupsof_Int %>%
+    distinct(Difference, .keep_all = TRUE) %>% 
+    arrange(Difference) %>%  # Change here to arrange in ascending order
+    slice_head(n = 10)
+  
+  Top_10_filtered_For <- JGI_UD_DD_UU_data %>% filter(Group %in% Top_10$Group)
+  
+  if (condition == "All") {
+    return(JGI_UD_DD_UU_data)
+  } else {
+    return(Top_10_filtered_For)
+  }
+}
